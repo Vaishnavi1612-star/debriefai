@@ -117,7 +117,7 @@ export default function Dashboard({ onAnalysisComplete, isAnalyzing, setIsAnalyz
 
   const handleAnalyze = async () => {
     setError(null);
-     if (!openaiKey.trim())     return setError('openAI API key is required. Use the "Debug API Key" button to test it.');
+     if (!openaiKey.trim())     return setError('openAI API key is required.');
     if (mode === 'text' && !transcript.trim()) return setError('Please paste a transcript first.');
     if (mode !== 'text' && !videoFile)         return setError(mode === 'live' ? 'Record first, then click "Use This Recording".' : 'Please upload a file.');
     if (mode !== 'text' && !openaiKey.trim())  return setError('OpenAI API key is required for audio transcription.');
@@ -236,7 +236,7 @@ export default function Dashboard({ onAnalysisComplete, isAnalyzing, setIsAnalyz
               </button>
             </div>
 
-             {mode !== 'text' && (
+             (
               <div className="panel-section">
                 <label className="panel-label">OpenAI API Key <span className="key-purpose">—  Required for transcription + analysis</span></label>
                 <input type="password" className="role-input" placeholder="sk-…" value={openaiKey} onChange={(e)=>setOpenaiKey(e.target.value)} />
