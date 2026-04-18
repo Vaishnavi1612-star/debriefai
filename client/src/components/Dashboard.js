@@ -134,8 +134,8 @@ export default function Dashboard({ onAnalysisComplete, isAnalyzing, setIsAnalyz
         if (!finalTranscript?.trim()) throw new Error('Whisper returned an empty transcript. Is there speech in the recording?');
       }
 
-      setStep('analyzing'); setProgressMsg('Analyzing responses with Claude AI…');
-      const data = await analyzeTranscript(finalTranscript, jobRole, claudeKey);
+      setStep('analyzing'); setProgressMsg('Analyzing responses with openaiKey…');
+     const data = await analyzeTranscript(finalTranscript, jobRole, openaiKey);
 
       setStep('done'); setProgressMsg('Analysis complete!');
       setTimeout(() => { onAnalysisComplete(data); setStep('idle'); setProgressMsg(''); }, 800);
