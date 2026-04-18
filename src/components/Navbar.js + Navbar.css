@@ -1,0 +1,155 @@
+import React from 'react';
+import './Navbar.css';
+
+const Logo = () => (
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+    <rect width="32" height="32" rx="8" fill="#4f8ef7" />
+    <path d="M8 22 L14 10 L20 18 L23 14 L26 18" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <circle cx="8" cy="22" r="2" fill="white" />
+  </svg>
+);
+
+const NavItem = ({ label, active, onClick }) => (
+  <button className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}>
+    {label}
+    {active && <span className="nav-indicator" />}
+  </button>
+);
+
+export default function Navbar({ activePage, setActivePage }) {
+  return (
+    <nav className="navbar">
+      <div className="navbar-inner">
+        <div className="navbar-brand">
+          <Logo />
+          <span className="brand-name">DebriefAI</span>
+        </div>
+
+        <div className="navbar-links">
+          {['dashboard', 'analysis', 'reports', 'settings'].map((page) => (
+            <NavItem
+              key={page}
+              label={page.charAt(0).toUpperCase() + page.slice(1)}
+              active={activePage === page}
+              onClick={() => setActivePage(page)}
+            />
+          ))}
+        </div>
+
+        <div className="navbar-user">
+          <span className="user-name">John Doe</span>
+          <div className="user-avatar">JD</div>
+        </div>
+      </div>
+    </nav>
+  );
+.navbar {
+  background: rgba(11, 11, 20, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 48px;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.nav-item {
+  background: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  position: relative;
+  transition: color 0.2s, background 0.2s;
+  font-family: var(--font-body);
+}
+
+.nav-item:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nav-item.active {
+  color: var(--accent-blue);
+  background: rgba(79, 142, 247, 0.1);
+}
+
+.nav-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--accent-blue);
+  border-radius: 2px;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.user-name {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  font-family: var(--font-display);
+}
+
+@media (max-width: 768px) {
+  .navbar-inner {
+    padding: 0 16px;
+    gap: 16px;
+  }
+  .user-name { display: none; }
+  .nav-item { padding: 6px 10px; font-size: 13px; }
+}
+}
