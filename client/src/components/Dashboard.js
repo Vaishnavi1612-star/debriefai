@@ -120,7 +120,9 @@ export default function Dashboard({ onAnalysisComplete, isAnalyzing, setIsAnalyz
      if (!openaiKey.trim())     return setError('openAI API key is required.');
     if (mode === 'text' && !transcript.trim()) return setError('Please paste a transcript first.');
     if (mode !== 'text' && !videoFile)         return setError(mode === 'live' ? 'Record first, then click "Use This Recording".' : 'Please upload a file.');
-    if (mode !== 'text' && !openaiKey.trim())  return setError('OpenAI API key is required for audio transcription.');
+    if (!openaiKey.trim()) {
+  return setError('OpenAI API key is required for analysis.');
+}
 
     setIsAnalyzing(true);
     try {
