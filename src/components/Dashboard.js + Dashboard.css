@@ -1,0 +1,549 @@
+import React, { useState, useRef } from 'react';
+import { Upload, Mic, FileText, ChevronRight, Zap, Target, TrendingUp } from 'lucide-react';
+import { analyzeInterview, generateMockAnalysis } from '../services/claudeApi';
+import './Dashboard.css';
+
+const SAMPLE_TRANSCRIPT = `Interviewer: Tell me about yourself and your background.
+
+Candidate: Um, so I've been working in software for about, uh, 4 years now. I mostly do backend stuff. I worked at a startup and, you know, we built some things. It was good experience I think.
+
+Interviewer: Can you describe a challenging technical problem you solved?
+
+Candidate: Yeah, so um... there was this one time where like the system was slow. We had to make it faster. I looked at the code and found some issues. I fixed them and it got better. The team was happy about that.
+
+Interviewer: How do you handle disagreements with teammates?
+
+Candidate: I try to, um, talk to them about it. I think communication is important. Usually we figure it out. I don't really like conflict so I try to avoid it if possible.
+
+Interviewer: Walk me through how you'd design a URL shortener.
+
+Candidate: Okay so... um... [long pause] ...you'd need a database. And like a way to generate short codes. There'd be a server that handles the redirects. I think you'd use Redis maybe? Or some caching thing. It's not too complicated.`;
+
+export default function Dashboard({ onAnalysisComplete, isAnalyzing, setIsAnalyzing }) {
+  const [transcript, setTranscript] = useState('');
+  const [jobRole, setJobRole] = useState('Software Engineer');
+  const [dragOver, setDragOver] = useState(false);
+  const [fileName, setFileName] = useState(null);
+  const [error, setError] = useState(null);
+  const [useAI, setUseAI] = useState(false);
+  const fileRef = useRef();
+
+  const handleFile = (file) => {
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => setTranscript(e.target.result);
+    reader.readAsText(file);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  };
+
+  const handleAnalyze = async () => {
+    if (!transcript.trim()) {
+      setError('Please paste a transcript or upload a file first.');
+      return;
+    }
+    setError(null);
+    setIsAnalyzing(true);
+
+    try {
+      let data;
+      if (useAI) {
+        data = await analyzeInterview(transcript, jobRole);
+      } else {
+        await new Promise((r) => setTimeout(r, 2800));
+        data = generateMockAnalysis();
+      }
+      onAnalysisComplete(data);
+    } catch (err) {
+      setError(useAI ? 'AI analysis failed. Check API key or use Demo Mode.' : err.message);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const loadSample = () => {
+    setTranscript(SAMPLE_TRANSCRIPT);
+    setFileName('sample_interview.txt');
+  };
+
+  return (
+    <div className="dashboard">
+      <div className="dashboard-header">
+        <div className="header-badge">
+          <Zap size={12} />
+          Post-Interview Intelligence
+        </div>
+        <h1 className="dashboard-title">Understand exactly<br />why you didn't get the offer.</h1>
+        <p className="dashboard-subtitle">Upload or paste your interview transcript. Our AI breaks down every response, detects confidence drops, and builds you a targeted improvement plan.</p>
+      </div>
+
+      <div className="dashboard-grid">
+        {/* Left: Input Panel */}
+        <div className="input-panel">
+          <div className="panel-section">
+            <label className="panel-label">Job Role</label>
+            <input
+              className="role-input"
+              value={jobRole}
+              onChange={(e) => setJobRole(e.target.value)}
+              placeholder="e.g. Software Engineer, Product Manager..."
+            />
+          </div>
+
+          <div className="panel-section">
+            <div className="panel-label-row">
+              <label className="panel-label">Interview Transcript</label>
+              <button className="sample-btn" onClick={loadSample}>Load Sample</button>
+            </div>
+            <div
+              className={`drop-zone ${dragOver ? 'dragover' : ''} ${fileName ? 'has-file' : ''}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileRef.current.click()}
+            >
+              <input ref={fileRef} type="file" accept=".txt,.pdf,.doc,.docx" style={{ display: 'none' }} onChange={(e) => handleFile(e.target.files[0])} />
+              <Upload size={22} className="drop-icon" />
+              {fileName ? (
+                <span className="drop-filename">{fileName}</span>
+              ) : (
+                <>
+                  <span className="drop-text">Drop file or click to upload</span>
+                  <span className="drop-hint">.txt, .pdf, .doc supported</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="panel-section">
+            <label className="panel-label">Or paste transcript directly</label>
+            <textarea
+              className="transcript-input"
+              placeholder="Paste your interview transcript here..."
+              value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
+              rows={8}
+            />
+          </div>
+
+          <div className="mode-toggle">
+            <button
+              className={`mode-btn ${!useAI ? 'active' : ''}`}
+              onClick={() => setUseAI(false)}
+            >
+              Demo Mode
+            </button>
+            <button
+              className={`mode-btn ${useAI ? 'active' : ''}`}
+              onClick={() => setUseAI(true)}
+            >
+              AI Mode (API Key)
+            </button>
+          </div>
+
+          {error && <div className="error-msg">{error}</div>}
+
+          <button
+            className={`analyze-btn ${isAnalyzing ? 'loading' : ''}`}
+            onClick={handleAnalyze}
+            disabled={isAnalyzing}
+          >
+            {isAnalyzing ? (
+              <><span className="spinner" /> Analyzing Interview...</>
+            ) : (
+              <><Zap size={16} /> Analyze My Interview</>
+            )}
+          </button>
+        </div>
+
+        {/* Right: Feature Cards */}
+        <div className="features-panel">
+          <h3 className="features-title">What gets analyzed</h3>
+
+          <div className="feature-card">
+            <div className="feature-icon blue">
+              <Mic size={18} />
+            </div>
+            <div>
+              <div className="feature-name">Speech Pattern Analysis</div>
+              <div className="feature-desc">Filler word frequency, pacing, hesitation moments, and confidence drops detected by voice modulation signals.</div>
+            </div>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon violet">
+              <Target size={18} />
+            </div>
+            <div>
+              <div className="feature-name">Answer Structure Scoring</div>
+              <div className="feature-desc">Each response evaluated for clarity, depth, relevance, and STAR framework alignment against role expectations.</div>
+            </div>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon cyan">
+              <FileText size={18} />
+            </div>
+            <div>
+              <div className="feature-name">Weakness Impact Ranking</div>
+              <div className="feature-desc">Identified gaps ranked by their actual impact on hiring decisions — so you fix what matters most first.</div>
+            </div>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon green">
+              <TrendingUp size={18} />
+            </div>
+            <div>
+              <div className="feature-name">Targeted Improvement Plan</div>
+              <div className="feature-desc">Personalized action steps with timeframes so you walk into your next interview measurably better prepared.</div>
+            </div>
+          </div>
+
+          <div className="cta-note">
+            <ChevronRight size={14} />
+            No interview recording required — just the transcript
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(79, 142, 247, 0.1);
+  border: 1px solid rgba(79, 142, 247, 0.25);
+  color: var(--accent-blue);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.dashboard-title {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -1.5px;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.dashboard-subtitle {
+  color: var(--text-secondary);
+  font-size: 16px;
+  max-width: 560px;
+  margin: 0 auto;
+  font-weight: 300;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 28px;
+  align-items: start;
+}
+
+.input-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.panel-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sample-btn {
+  background: none;
+  color: var(--accent-blue);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.sample-btn:hover {
+  background: rgba(79, 142, 247, 0.1);
+}
+
+.role-input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 14px;
+  padding: 10px 14px;
+  transition: border-color 0.2s;
+}
+
+.role-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.role-input::placeholder {
+  color: var(--text-muted);
+}
+
+.drop-zone {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--accent-blue);
+  background: rgba(79, 142, 247, 0.04);
+}
+
+.drop-zone.has-file {
+  border-color: var(--accent-green);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.drop-icon {
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.drop-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.drop-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.drop-filename {
+  font-size: 13px;
+  color: var(--accent-green);
+  font-weight: 500;
+}
+
+.transcript-input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 12px 14px;
+  resize: vertical;
+  line-height: 1.6;
+  transition: border-color 0.2s;
+  min-height: 140px;
+}
+
+.transcript-input:focus {
+  border-color: rgba(79, 142, 247, 0.4);
+}
+
+.transcript-input::placeholder {
+  color: var(--text-muted);
+}
+
+.mode-toggle {
+  display: flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+}
+
+.mode-btn {
+  flex: 1;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: 5px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.mode-btn.active {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.error-msg {
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  color: #f87171;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+}
+
+.analyze-btn {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet));
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 14px 20px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.2s, transform 0.1s;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+.analyze-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.analyze-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Features Panel */
+.features-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.features-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.feature-card:hover {
+  border-color: rgba(79, 142, 247, 0.3);
+  transform: translateX(2px);
+}
+
+.feature-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.feature-icon.blue { background: rgba(79, 142, 247, 0.15); color: var(--accent-blue); }
+.feature-icon.violet { background: rgba(139, 92, 246, 0.15); color: var(--accent-violet); }
+.feature-icon.cyan { background: rgba(34, 211, 238, 0.15); color: var(--accent-cyan); }
+.feature-icon.green { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+
+.feature-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  font-family: var(--font-display);
+}
+
+.feature-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.cta-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .features-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .features-title, .cta-note { grid-column: 1 / -1; }
+}
+}
