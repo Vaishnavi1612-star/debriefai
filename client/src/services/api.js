@@ -11,8 +11,6 @@ app.post('/api/analyze', async (req, res) => {
   }
 
   const prompt = `
-You are an expert interview coach.
-
 Analyze this ${jobRole} interview transcript.
 
 Transcript:
@@ -20,12 +18,11 @@ Transcript:
 ${transcript}
 """
 
-IMPORTANT:
-- Analysis MUST be based ONLY on this transcript
-- Each output MUST be unique
-- Do NOT use generic answers
-
-Return ONLY valid JSON:
+Rules:
+- Use ONLY this transcript
+- Do NOT give generic answers
+- Output MUST be different for different transcripts
+- Return ONLY JSON
 
 {
   "overall_score": <0-100>,
@@ -57,19 +54,25 @@ Return ONLY valid JSON:
 `;
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // cheap + fast
-        messages: [
-          { role: 'system', content: 'You are a strict JSON generator.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7
+        model: 'gpt-4o-mini',
+        temperature: 0.7,
+        input: [
+          {
+            role: 'system',
+            content: 'You are a strict JSON generator. Only return valid JSON.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
       }),
     });
 
@@ -80,7 +83,9 @@ Return ONLY valid JSON:
     }
 
     const data = JSON.parse(text);
-    const output = data.choices[0].message.content;
+
+    // ✅ correct extraction for new API
+    const output = data.output[0].content[0].text;
 
     let clean = output.replace(/```json|```/g, '').trim();
 
