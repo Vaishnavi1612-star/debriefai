@@ -1,84 +1,102 @@
-// API base (Render / local)
-const API_BASE = process.env.REACT_APP_API_URL || '';
+app.post('/api/analyze', async (req, res) => {
+  const { transcript, jobRole = 'Software Engineer' } = req.body;
+  const openaiKey = req.headers['x-openai-key'];
 
-// Safe JSON handler
-async function safeJson(res) {
-  const ct = res.headers.get('content-type') || '';
-
-  if (ct.includes('text/html')) {
-    throw new Error(
-      `Server returned HTML instead of JSON (status ${res.status}). Check backend deployment.`
-    );
+  if (!transcript?.trim()) {
+    return res.status(400).json({ error: 'No transcript provided' });
   }
 
-  return res.json();
-}
-
-// Health check
-export async function checkHealth() {
-  const res = await fetch(`${API_BASE}/api/health`);
-  return safeJson(res);
-}
-
-// Debug API key
-export async function debugKey(claudeKey) {
-  const res = await fetch(`${API_BASE}/api/debug-key`, {
-    method: 'POST',
-    headers: { 'x-claude-key': claudeKey },
-  });
-
-  return safeJson(res);
-}
-
-// Transcription (OpenAI Whisper)
-export async function transcribeAudio(file, openaiKey) {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const res = await fetch(`${API_BASE}/api/transcribe`, {
-    method: 'POST',
-    headers: { 'x-openai-key': openaiKey },
-    body: formData,
-  });
-
-  const data = await safeJson(res);
-
-  if (!res.ok) {
-    throw new Error(data.error || `Transcription failed (${res.status})`);
+  if (!openaiKey) {
+    return res.status(400).json({ error: 'Missing x-openai-key header' });
   }
 
-  return data;
+  const prompt = `
+You are an expert interview coach.
+
+Analyze this ${jobRole} interview transcript.
+
+Transcript:
+"""
+${transcript}
+"""
+
+IMPORTANT:
+- Analysis MUST be based ONLY on this transcript
+- Each output MUST be unique
+- Do NOT use generic answers
+
+Return ONLY valid JSON:
+
+{
+  "overall_score": <0-100>,
+  "performance": {
+    "clarity": { "score": <0-100>, "label": "", "details": "" },
+    "confidence": { "score": <0-100>, "label": "", "details": "" },
+    "relevance": { "score": <0-100>, "label": "", "details": "" },
+    "depth": { "score": <0-100>, "label": "", "details": "" },
+    "structure": { "score": <0-100>, "label": "", "details": "" }
+  },
+  "weaknesses": [
+    { "type": "", "severity": "", "description": "", "impact": "" }
+  ],
+  "speech_patterns": {
+    "filler_words": { "count": <number>, "examples": [""] },
+    "pause_score": <0-100>,
+    "pacing": "",
+    "confidence_drops": [""]
+  },
+  "answer_breakdown": [
+    { "question_type": "", "quality": <0-100>, "issue": "", "suggestion": "" }
+  ],
+  "improvement_plan": [
+    { "priority": <1-5>, "area": "", "action": "", "timeframe": "" }
+  ],
+  "hiring_probability": <0-100>,
+  "summary": ""
 }
+`;
 
-// 🔥 MAIN FIXED FUNCTION (ANALYSIS)
-export async function analyzeTranscript(transcript, jobRole, claudeKey) {
-  if (!transcript || transcript.trim().length === 0) {
-    throw new Error("Transcript is empty");
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', // cheap + fast
+        messages: [
+          { role: 'system', content: 'You are a strict JSON generator.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7
+      }),
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      throw new Error(`OpenAI (${response.status}): ${text}`);
+    }
+
+    const data = JSON.parse(text);
+    const output = data.choices[0].message.content;
+
+    let clean = output.replace(/```json|```/g, '').trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch {
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Invalid JSON from OpenAI');
+    }
+
+    res.json(parsed);
+
+  } catch (err) {
+    console.error('[analyze]', err.message);
+    res.status(500).json({ error: err.message });
   }
-
-  const res = await fetch(`${API_BASE}/api/analyze`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-claude-key': claudeKey,
-    },
-    body: JSON.stringify({
-      transcript,
-      jobRole,
-    }),
-  });
-
-  const data = await safeJson(res);
-
-  // ❌ If backend failed → DO NOT reuse old result
-  if (!res.ok) {
-    throw new Error(data.error || `Analysis failed (${res.status})`);
-  }
-
-  // ✅ Ensure response is different per transcript
-  if (!data || typeof data !== 'object') {
-    throw new Error("Invalid analysis response");
-  }
-
-  return data;
-}
+});
