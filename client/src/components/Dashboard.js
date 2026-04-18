@@ -105,7 +105,6 @@ export default function Dashboard({ onAnalysisComplete, isAnalyzing, setIsAnalyz
   const [transcript, setTranscript] = useState('');
   const [jobRole,    setJobRole]    = useState('Software Engineer');
   const [openaiKey,  setOpenaiKey]  = useState('');
-  const [claudeKey,  setClaudeKey]  = useState('');
   const [dragOver,   setDragOver]   = useState(false);
   const [step,       setStep]       = useState('idle');
   const [progressMsg,setProgressMsg]= useState('');
@@ -118,7 +117,7 @@ export default function Dashboard({ onAnalysisComplete, isAnalyzing, setIsAnalyz
 
   const handleAnalyze = async () => {
     setError(null);
-    if (!claudeKey.trim())      return setError('Anthropic API key is required. Use the "Debug API Key" button to test it.');
+     if (!openaiKey.trim())     return setError('openAI API key is required. Use the "Debug API Key" button to test it.');
     if (mode === 'text' && !transcript.trim()) return setError('Please paste a transcript first.');
     if (mode !== 'text' && !videoFile)         return setError(mode === 'live' ? 'Record first, then click "Use This Recording".' : 'Please upload a file.');
     if (mode !== 'text' && !openaiKey.trim())  return setError('OpenAI API key is required for audio transcription.');
@@ -134,7 +133,7 @@ export default function Dashboard({ onAnalysisComplete, isAnalyzing, setIsAnalyz
         if (!finalTranscript?.trim()) throw new Error('Whisper returned an empty transcript. Is there speech in the recording?');
       }
 
-      setStep('analyzing'); setProgressMsg('Analyzing responses with openaiKey…');
+      setStep('analyzing'); setProgressMsg('Analyzing responses with AI…');
      const data = await analyzeTranscript(finalTranscript, jobRole, openaiKey);
 
       setStep('done'); setProgressMsg('Analysis complete!');
@@ -157,7 +156,7 @@ export default function Dashboard({ onAnalysisComplete, isAnalyzing, setIsAnalyz
       <div className="dashboard-header">
         <div className="header-badge"><Zap size={12} /> Post-Interview Intelligence</div>
         <h1 className="dashboard-title">Understand exactly<br />why you didn't get the offer.</h1>
-        <p className="dashboard-subtitle">Upload a recording, go live, or paste a transcript. Claude AI analyzes every response and builds your improvement plan.</p>
+        <p className="dashboard-subtitle">Upload a recording, go live, or paste a transcript. AI analyzes every response and builds your improvement plan.</p>
       </div>
 
       <div className="dashboard-grid">
@@ -237,14 +236,9 @@ export default function Dashboard({ onAnalysisComplete, isAnalyzing, setIsAnalyz
               </button>
             </div>
 
-            <div className="panel-section">
-              <label className="panel-label">Anthropic API Key <span className="key-purpose">— Claude analysis (required)</span></label>
-              <input type="password" className="role-input" placeholder="sk-ant-api03-…" value={claudeKey} onChange={(e)=>setClaudeKey(e.target.value)} />
-            </div>
-
-            {mode !== 'text' && (
+             {mode !== 'text' && (
               <div className="panel-section">
-                <label className="panel-label">OpenAI API Key <span className="key-purpose">— Whisper transcription (audio/video only)</span></label>
+                <label className="panel-label">OpenAI API Key <span className="key-purpose">—  Required for transcription + analysis</span></label>
                 <input type="password" className="role-input" placeholder="sk-…" value={openaiKey} onChange={(e)=>setOpenaiKey(e.target.value)} />
               </div>
             )}
