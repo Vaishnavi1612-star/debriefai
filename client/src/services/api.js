@@ -1,107 +1,67 @@
-app.post('/api/analyze', async (req, res) => {
-  const { transcript, jobRole = 'Software Engineer' } = req.body;
-  const openaiKey = req.headers['x-openai-key'];
+// ─────────────────────────────────────────────────────────────────────────────
+// FRONTEND API SERVICE
+// This file ONLY contains fetch() calls to the backend.
+// Do NOT put any Express/Node code here (no app.post, no require, no fs).
+// ─────────────────────────────────────────────────────────────────────────────
 
-  if (!transcript?.trim()) {
-    return res.status(400).json({ error: 'No transcript provided' });
+// Empty string = same origin in production on Render (correct).
+// For local dev: create client/.env with REACT_APP_API_URL=http://localhost:5000
+const API_BASE = process.env.REACT_APP_API_URL || '';
+
+async function safeJson(res) {
+  const ct = res.headers.get('content-type') || '';
+  if (ct.includes('text/html')) {
+    throw new Error(
+      `Server returned HTML instead of JSON (status ${res.status}). ` +
+      `The /api route was not found. ` +
+      `On Render: make sure Type = Web Service and Start Command = "node server.js".`
+    );
   }
-
-  if (!openaiKey) {
-    return res.status(400).json({ error: 'Missing x-openai-key header' });
-  }
-
-  const prompt = `
-Analyze this ${jobRole} interview transcript.
-
-Transcript:
-"""
-${transcript}
-"""
-
-Rules:
-- Use ONLY this transcript
-- Do NOT give generic answers
-- Output MUST be different for different transcripts
-- Return ONLY JSON
-
-{
-  "overall_score": <0-100>,
-  "performance": {
-    "clarity": { "score": <0-100>, "label": "", "details": "" },
-    "confidence": { "score": <0-100>, "label": "", "details": "" },
-    "relevance": { "score": <0-100>, "label": "", "details": "" },
-    "depth": { "score": <0-100>, "label": "", "details": "" },
-    "structure": { "score": <0-100>, "label": "", "details": "" }
-  },
-  "weaknesses": [
-    { "type": "", "severity": "", "description": "", "impact": "" }
-  ],
-  "speech_patterns": {
-    "filler_words": { "count": <number>, "examples": [""] },
-    "pause_score": <0-100>,
-    "pacing": "",
-    "confidence_drops": [""]
-  },
-  "answer_breakdown": [
-    { "question_type": "", "quality": <0-100>, "issue": "", "suggestion": "" }
-  ],
-  "improvement_plan": [
-    { "priority": <1-5>, "area": "", "action": "", "timeframe": "" }
-  ],
-  "hiring_probability": <0-100>,
-  "summary": ""
+  return res.json();
 }
-`;
 
-  try {
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: 0.7,
-        input: [
-          {
-            role: 'system',
-            content: 'You are a strict JSON generator. Only return valid JSON.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
-      }),
-    });
+// Test server routing + OpenAI key validity
+export async function checkHealth() {
+  const res = await fetch(`${API_BASE}/api/health`);
+  return safeJson(res);
+}
 
-    const text = await response.text();
+export async function debugKey(openaiKey) {
+  const res = await fetch(`${API_BASE}/api/debug-key`, {
+    method: 'POST',
+    headers: { 'x-openai-key': openaiKey },
+  });
+  return safeJson(res);
+}
 
-    if (!response.ok) {
-      throw new Error(`OpenAI (${response.status}): ${text}`);
-    }
+// Transcribe audio/video via Whisper
+export async function transcribeAudio(file, openaiKey) {
+  const formData = new FormData();
+  formData.append('file', file);
 
-    const data = JSON.parse(text);
+  const res = await fetch(`${API_BASE}/api/transcribe`, {
+    method: 'POST',
+    headers: { 'x-openai-key': openaiKey },
+    body: formData,
+  });
 
-    // ✅ correct extraction for new API
-    const output = data.output[0].content[0].text;
+  const data = await safeJson(res);
+  if (!res.ok) throw new Error(data.error || `Transcription failed (${res.status})`);
+  return data;
+}
 
-    let clean = output.replace(/```json|```/g, '').trim();
+// Analyze transcript via GPT-4o-mini
+export async function analyzeTranscript(transcript, jobRole, openaiKey) {
+  const res = await fetch(`${API_BASE}/api/analyze`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-openai-key': openaiKey,
+    },
+    body: JSON.stringify({ transcript, jobRole }),
+  });
 
-    let parsed;
-    try {
-      parsed = JSON.parse(clean);
-    } catch {
-      const match = clean.match(/\{[\s\S]*\}/);
-      if (match) parsed = JSON.parse(match[0]);
-      else throw new Error('Invalid JSON from OpenAI');
-    }
-
-    res.json(parsed);
-
-  } catch (err) {
-    console.error('[analyze]', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+  const data = await safeJson(res);
+  if (!res.ok) throw new Error(data.error || `Analysis failed (${res.status})`);
+  return data;
+}
