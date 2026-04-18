@@ -1,0 +1,142 @@
+.dp-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(6px);
+}
+
+.dp-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%; max-width: 560px;
+  padding: 28px;
+  display: flex; flex-direction: column; gap: 18px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+}
+
+.dp-header {
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.dp-title {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 800; letter-spacing: -0.3px;
+}
+
+.dp-close {
+  background: none; color: var(--text-muted);
+  font-size: 18px; padding: 4px 8px;
+  border-radius: 4px; transition: color 0.2s;
+}
+.dp-close:hover { color: var(--text-primary); }
+
+.dp-subtitle {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+  margin-top: -6px;
+}
+
+.dp-input-row {
+  display: flex; gap: 10px;
+}
+
+.dp-key-input {
+  flex: 1;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px; padding: 10px 13px;
+  font-family: monospace;
+  transition: border-color 0.2s;
+}
+.dp-key-input:focus { border-color: var(--accent-blue); outline: none; }
+.dp-key-input::placeholder { color: var(--text-muted); font-family: var(--font-body); }
+
+.dp-run-btn {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet));
+  color: white; font-size: 13px; font-weight: 600;
+  padding: 10px 18px; border-radius: var(--radius-sm);
+  white-space: nowrap; font-family: var(--font-display);
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+.dp-run-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.dp-run-btn.running { opacity: 0.7; }
+
+/* Rows */
+.dp-rows { display: flex; flex-direction: column; gap: 8px; }
+
+.dp-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  transition: border-color 0.3s;
+}
+.dp-row.ok   { border-color: rgba(16,185,129,0.35); }
+.dp-row.fail { border-color: rgba(244,63,94,0.35); }
+.dp-row.running { border-color: rgba(79,142,247,0.35); }
+
+.dp-icon {
+  font-size: 16px; font-weight: 700; flex-shrink: 0;
+  width: 20px; text-align: center; margin-top: 1px;
+}
+.dp-icon.idle { color: var(--text-muted); }
+.dp-icon.ok   { color: var(--accent-green); }
+.dp-icon.fail { color: var(--accent-red); }
+.dp-icon.spin {
+  color: var(--accent-blue);
+  display: inline-block;
+  animation: dp-spin 0.8s linear infinite;
+}
+@keyframes dp-spin { to { transform: rotate(360deg); } }
+
+.dp-row-content { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+
+.dp-row-label {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+}
+
+.dp-row-msg {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+}
+
+/* Fix box */
+.dp-fix {
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.dp-fix.bad  { background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.25); }
+.dp-fix.good { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); }
+
+.dp-fix-title {
+  font-size: 13px; font-weight: 700;
+}
+.dp-fix.bad  .dp-fix-title { color: #f87171; }
+.dp-fix.good .dp-fix-title { color: #6ee7b7; }
+
+.dp-fix-body {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+}
+
+.dp-done-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white; font-size: 14px; font-weight: 600;
+  padding: 12px; border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  transition: opacity 0.2s;
+}
+.dp-done-btn:hover { opacity: 0.88; }
+
+.dp-links {
+  display: flex; gap: 20px; padding-top: 4px;
+}
+.dp-links a {
+  font-size: 12px; color: var(--accent-blue);
+  text-decoration: none; font-weight: 500;
+}
+.dp-links a:hover { text-decoration: underline; }
