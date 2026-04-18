@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
 import AnalysisPage from './components/AnalysisPage';
-import ReportsPage from './components/ReportsPage';
+import ReportPage from './components/ReportPage';
 import SettingsPage from './components/SettingsPage';
 import './App.css';
 
@@ -33,8 +33,8 @@ function App() {
         );
       case 'analysis':
         return <AnalysisPage data={analysisData} />;
-      case 'reports':
-        return <ReportsPage analysisData={analysisData} />;
+      case 'report':
+        return <ReportPage analysisData={analysisData} />;
       case 'settings':
         return <SettingsPage />;
       default:
